@@ -1,0 +1,12 @@
+C:\Users\Arbin\source\repos\ConsoleApp1\ConsoleApp1\bin\x64\Debug\ConsoleApp1.exe.config
+C:\Users\Arbin\source\repos\ConsoleApp1\ConsoleApp1\bin\x64\Debug\ConsoleApp1.exe
+C:\Users\Arbin\source\repos\ConsoleApp1\ConsoleApp1\bin\x64\Debug\ConsoleApp1.pdb
+C:\Users\Arbin\source\repos\ConsoleApp1\ConsoleApp1\bin\x64\Debug\Python.Runtime.dll
+C:\Users\Arbin\source\repos\ConsoleApp1\ConsoleApp1\bin\x64\Debug\Python.Runtime.xml
+C:\Users\Arbin\source\repos\ConsoleApp1\ConsoleApp1\obj\x64\Debug\ConsoleApp1.csproj.AssemblyReference.cache
+C:\Users\Arbin\source\repos\ConsoleApp1\ConsoleApp1\obj\x64\Debug\ConsoleApp1.csproj.SuggestedBindingRedirects.cache
+C:\Users\Arbin\source\repos\ConsoleApp1\ConsoleApp1\obj\x64\Debug\ConsoleApp1.csproj.CoreCompileInputs.cache
+C:\Users\Arbin\source\repos\ConsoleApp1\ConsoleApp1\obj\x64\Debug\ConsoleApp1.csproj.CopyComplete
+C:\Users\Arbin\source\repos\ConsoleApp1\ConsoleApp1\obj\x64\Debug\ConsoleApp1.exe
+C:\Users\Arbin\source\repos\ConsoleApp1\ConsoleApp1\obj\x64\Debug\ConsoleApp1.pdb
+C:\Users\Arbin\source\repos\ConsoleApp1\ConsoleApp1\bin\x64\Debug\ArbinCTI.dll

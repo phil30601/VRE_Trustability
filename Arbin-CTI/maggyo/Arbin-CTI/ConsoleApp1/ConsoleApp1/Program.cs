@@ -1,0 +1,1097 @@
+﻿/*
+* ==============================================================================
+* Filename: ArbinClientTests
+* Description: This file contains test methods for testing various functions of ArbinClient class.
+* ==============================================================================
+*/
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading;
+using System.IO;
+using Python.Runtime;
+using ArbinCTI.Core;
+using ArbinCTI.Core.Control;
+using ArbinCTI.Core.Inteface;
+
+namespace ArbinCTI.Core
+{
+    /// <summary>
+    /// <para>The <see cref="ArbinCTI.Core"/> Provide connection service.</para>
+    /// <para><see cref="ArbinClient"/> is used to connect to CTI.</para>
+    /// <see cref="ArbinCommand"/> contains the basic information of the CTI return packet, which is the main base class for all command classes.
+    /// </summary>
+
+    public class ArbinClientTests
+    {
+        private ArbinClient client;
+        private MyArbinControl ctrl;
+        MyTestData testData;
+        private bool? connected;
+        static string[] lines = File.ReadAllLines(@"C:\Users\Arbin\source\repos\ConsoleApp1\TestConfig.txt");
+        private readonly string MyIP = lines[0];
+        private readonly string UserName = lines[1];
+        private readonly string Password = lines[2];
+        private readonly string Schedule = lines[3];
+        private readonly string SerialNumber = lines[4];
+        private float NominalCapacity = float.Parse(lines[5]);
+        private readonly int WrongChnlIndex = int.Parse(lines[9]);
+        readonly static DateTime A = DateTime.Now;
+        readonly static string B = A.ToString("yy/MM/dd HH/mm/ss");
+        readonly static string TestName = lines[6] + B;
+
+        readonly string channelNumbers = lines[7] + " " + lines[8];
+        private readonly List<ushort> Chnl_3E = new List<ushort>();
+        private readonly List<ushort> Chnl_2E = new List<ushort>();
+        private readonly List<ushort> Chnl = new List<ushort>();
+
+        public class MyTestData
+        {
+            public ArbinCommandLoginFeed LoginFeed { get; set; }
+            public ArbinCommandAssignScheduleFeed ScheduleFeed { get; set; }
+            public ArbinCommandLogicConnectFeed LogicConnectFeed { get; set; }
+            public ArbinCommandStartChannelFeed StartChannelFeed { get; set; }
+            public ArbinCommandBrowseDirectoryFeed BrowseDirectoryFeed { get; set; }
+            public ArbinCommandStopChannelFeed StopChannelFeed { get; set; }
+            public ArbinCommandGetSerialNumberFeed GetSerialNumberFeed { get; set; }
+            public ArbinCommandResumChanneleFeed resumChanneleFeed { get; set; }
+            public ArbinCommandNewOrDeleteFeed NewOrDeleteFeed { get; set; }
+            public ArbinCommandJumpChannelFeed JumpChannelFeed { get; set; }
+            public ArbinCommandGetStartDataFeed GetStartDataFeed { get; set; }
+            public ArbinCommandGetChannelDataFeed GetChannelDataFeed { get; set; }
+            public ArbinCommandSetMetaVariableFeed SetMetaVariableFeed { get; set; }
+            public ArbinCommandUpLoadFileFeed UpLoadFileFeed { get; set; }
+            public ArbinCommandSendMsgToCTIFeed SendMsgToCTIFeed { get; set; }
+        }
+        public class MyArbinControl : ArbinControl
+        {
+            public MyTestData TestData { get; }
+            public delegate void UploadFileFeedbackEvent(ArbinCommandUpLoadFileFeed feedback);
+            public event UploadFileFeedbackEvent UploadFileFeedback;
+
+            public override void OnGetStatusExtendInformationBack(ArbinCommandGetChannelInfoExFeed cmd)
+            {
+
+            }
+            public override void OnGetResumeDataBack(ArbinCommandGetResumeDataFeed cmd)
+            {
+
+            }
+
+            public override void OnGetChannelsDataMinimalistModeFeedBack(ArbinCommandGetChannelDataMinimalistModeFeed cmd)
+            {
+
+            }
+            public override void OnCheckFileBack(ArbinCommandCheckFileFeed cmd)
+            {
+
+            }
+            public override void OnGetChannelsDataSimpleModeFeedBack(ArbinCommandGetChannelDataSimpleModeFeed cmd)
+            {
+
+            }
+            public override void OnAssignFileFeedBack(ArbinCommandAssignFileFeed cmd)
+            {
+
+            }
+            public override void OnUpdateParametersBack(ArbinCommandUpdateParameterFeed cmd)
+            {
+            }
+            public override void OnDownLoadFileBack(ArbinCommandDownLoadFileFeed cmd)
+            {
+
+            }
+            public override void OnApplyForUDPCommunicationFeedBack(ArbinCommandApplyForUDPCommunicationFeed cmd)
+            {
+                //throw new NotImplementedException();
+            }
+            public override void OnGetMetaVariablesFeedBack(ArbinCommandGetMetaVariablesFeed cmd)
+            {
+                //throw new NotImplementedException();
+            }
+            public override void OnConvertToAnonymousOrNamedTOBack(ArbinCommandConvertToAnonymousOrNamedTOFeed cmd)
+            {
+                //throw new NotImplementedException();
+            }
+            public override void OnSetIntervalTimeLogDataFeedBack(ArbinCommandSetIntervalTimeLogDataFeed cmd)
+            {
+                //throw new NotImplementedException();
+            }
+
+            public override void OnNewFolderBack(ArbinCommandNewFolderFeed cmd)
+            {
+                //throw new NotImplementedException();
+            }
+
+            public MyArbinControl(MyTestData testData)
+            {
+                TestData = testData;
+            }
+            public override void OnAssignScheduleFeedBack(ArbinCommandAssignScheduleFeed cmd)
+            {
+                Console.WriteLine("adsf");
+                TestData.ScheduleFeed = cmd;
+            }
+            public override void OnBrowseDirectoryBack(ArbinCommandBrowseDirectoryFeed cmd)
+            {
+                TestData.BrowseDirectoryFeed = cmd;
+            }
+            public override void OnGetChannelsDataFeedBack(ArbinCommandGetChannelDataFeed cmd)
+            {
+                TestData.GetChannelDataFeed = cmd;
+            }
+            public override void OnGetSerialNumberFeedBack(ArbinCommandGetSerialNumberFeed cmd)
+            {
+                TestData.GetSerialNumberFeed = cmd;
+            }
+            public override void OnGetStartDataBack(ArbinCommandGetStartDataFeed cmd)
+            {
+                TestData.GetStartDataFeed = cmd;
+            }
+            public override void OnJumpChannelFeedBack(ArbinCommandJumpChannelFeed cmd)
+            {
+                TestData.JumpChannelFeed = cmd;
+            }
+            public override void OnLogicConnectFeedBack(ArbinCommandLogicConnectFeed cmd)
+            {
+                TestData.LogicConnectFeed = cmd;
+            }
+            public override void OnNewOrDeleteBack(ArbinCommandNewOrDeleteFeed cmd)
+            {
+                TestData.NewOrDeleteFeed = cmd;
+            }
+            public override void OnResumeChannelFeedBack(ArbinCommandResumChanneleFeed cmd)
+            {
+                TestData.resumChanneleFeed = cmd;
+            }
+            public override void OnSendMsgToCTIBack(ArbinCommandSendMsgToCTIFeed cmd)
+            {
+                TestData.SendMsgToCTIFeed = cmd;
+            }
+            public override void OnSetMetaVariableFeedBack(ArbinCommandSetMetaVariableFeed cmd)
+            {
+                TestData.SetMetaVariableFeed = cmd;
+            }
+            public override void OnStartAutomaticCalibrationBack(ArbinCommandStartAutomaticCalibrationFeed cmd)
+            {
+
+            }
+            public override void OnStartChannelFeedBack(ArbinCommandStartChannelFeed cmd)
+            {
+                TestData.StartChannelFeed = cmd;
+            }
+            public override void OnStopChannelFeedBack(ArbinCommandStopChannelFeed cmd)
+            {
+                TestData.StopChannelFeed = cmd;
+            }
+            public override void OnUpdateMetaVariableAdvancedFeedBack(ArbinCommandUpdateMetaVariableAdvancedFeed cmd)
+            {
+            }
+            public override void OnUpLoadFileBack(ArbinCommandUpLoadFileFeed cmd)
+            {
+            }
+            public override void OnUserLoginFeedBack(ArbinCommandLoginFeed cmd)
+            {
+                TestData.LoginFeed = cmd;
+            }
+            public override void OnContinueChannelFeedBack(ArbinCommandContinueChannelFeed cmd)
+            {
+                throw new NotImplementedException();
+            }
+            public override void OnDeleteFileBack(ArbinCommandDeleteFileFeed cmd)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public void realTimeMachineLearning()
+        {
+            testData = new MyTestData();
+            ctrl = new MyArbinControl(testData);
+            ctrl.Start();
+            client = new ArbinClient();
+            client.OnConnectionChanged += (IArbinSocket Socket, ArbinSocketEventArgSet.SocketConnectionEventArgs e) =>
+            {
+                connected = e.Connected;
+            };
+            ctrl.ListenSocketRecv(client);
+            int number = client.ConnectAsync(MyIP, 9031, 1000, out int err);
+            bool temp = false;
+            while (true)
+            {
+                if (connected.HasValue)
+                {
+                    //Console.WriteLine(err);
+
+                    ctrl.PostLogicConnect(client, true);
+                    temp = ctrl.PostUserLogin(client, UserName, Password);
+                    Console.WriteLine("Login successful");
+                    break;
+                }
+            }
+            connected = client.IsConnected();
+            // Console.WriteLine(temp);
+            // Console.WriteLine(number);
+            ctrl.PostGetChannelsData(client,
+            (uint)ArbinCommandGetChannelDataFeed.GET_CHANNELS_INFO_NEED_TYPE.THIRD_PARTY_GET_CHANNELS_INFO_NEED_TYPE_AUX,
+            (short)(Chnl_2E[0]));
+
+   
+            while (true)
+            {
+                if (testData.GetChannelDataFeed != null)
+                {
+                    pythonSetup();
+
+                    double[,] input_datas = new double[5, 6];
+                    double[,] temp_arr = new double[5, 5];
+
+                    double[] input_data = new double[5];
+
+                    double throughput = 0;
+
+                    int row_num = 0;
+
+                    //start loop for data retrieval
+                    for (int i = 0; i < 100000; i++)
+                    {
+                        ctrl.PostGetChannelsData(client,
+                        (uint)ArbinCommandGetChannelDataFeed.GET_CHANNELS_INFO_NEED_TYPE.THIRD_PARTY_GET_CHANNELS_INFO_NEED_TYPE_AUX, (short)(Chnl_3E[0]));
+
+                        //needs to be calculated every second/update, irrespective of measurement frequency
+                        throughput += Math.Abs(testData.GetChannelDataFeed.m_Channels[0].Current) / 3600;
+
+
+                        //else
+                        //   continue;
+
+                        if (i < 4)
+                        {
+                            //populate first columns for past data retrieval
+                            input_datas[4 - i, 0] = testData.GetChannelDataFeed.m_Channels[0].Voltage;
+                            input_datas[4 - i, 1] = testData.GetChannelDataFeed.m_Channels[0].Power;
+                            input_datas[4 - i, 2] = testData.GetChannelDataFeed.m_Channels[0].Current;
+                            input_datas[4 - i, 3] = testData.GetChannelDataFeed.m_Channels[0].ChargeCapacity;
+                            input_datas[4 - i, 4] = testData.GetChannelDataFeed.m_Channels[0].ChargeEnergy;
+                            input_datas[4 - i, 5] = throughput;
+
+                            //get measurements every 2 seconds
+                            Thread.Sleep(2000);
+                            continue;
+                        }
+
+                        if (i % 2 == 0)
+                        {
+                            Thread.Sleep(2000);
+                            continue;
+                        }
+
+
+                        var watch = System.Diagnostics.Stopwatch.StartNew();
+
+
+                        //update past data array
+                        for (int j = input_datas.GetUpperBound(0); j >= 0; j--)
+                        {
+                            for (int k = 0; k < input_datas.GetUpperBound(1) + 1; k++)
+                            {
+                                if (j == 0)
+                                    input_datas[j, k] = 0;
+                                else
+                                    input_datas[j, k] = input_datas[j - 1, k];
+                            }
+                        }
+
+
+
+
+
+                        //get present measurements
+                        input_datas[0, 0] = testData.GetChannelDataFeed.m_Channels[0].Voltage;
+                        input_datas[0, 1] = testData.GetChannelDataFeed.m_Channels[0].Power;
+                        input_datas[0, 2] = testData.GetChannelDataFeed.m_Channels[0].Current;
+                        input_datas[0, 3] = testData.GetChannelDataFeed.m_Channels[0].ChargeCapacity;
+                        input_datas[0, 4] = testData.GetChannelDataFeed.m_Channels[0].ChargeEnergy;
+
+                        input_data[0] = testData.GetChannelDataFeed.m_Channels[0].Voltage;
+                        input_data[1] = testData.GetChannelDataFeed.m_Channels[0].Power;
+                        input_data[2] = testData.GetChannelDataFeed.m_Channels[0].Current;
+                        input_data[3] = testData.GetChannelDataFeed.m_Channels[0].ChargeCapacity;
+                        input_data[4] = testData.GetChannelDataFeed.m_Channels[0].ChargeEnergy;
+
+                        //print voltage measurements
+                        for (int a = 0; a < 5; a++)
+                        {
+                            Console.Write(input_datas[a, 0] + "\t");
+                        }
+                        Console.WriteLine();
+
+                        //get prediction from model
+                        //double result = modelPrediction(input_datas);
+                        //Console.WriteLine("Predicted anode potential is " + result + "V.");
+                        Console.WriteLine("Actual anode potential is " + testData.GetChannelDataFeed.m_Channels[0].Auxs[0][0].Value);
+
+                        //  Random random = new Random();
+                        ////  double result = random.NextDouble()*-0.1;
+
+                        //  Console.WriteLine(result);
+                        //  float current = 0.005f;
+
+                        //  if (result <= -0.05)
+                        //  {
+                        //      current -= 0.001f; //assign some current value 
+                        //      List<ArbinCommandGetMetaVariablesFeed.MetaVariableInfo> myVariableList = new List<ArbinCommandGetMetaVariablesFeed.MetaVariableInfo>();
+                        //      myVariableList.Add(new ArbinCommandGetMetaVariablesFeed.MetaVariableInfo()
+                        //      {
+                        //          m_Channel = 21,
+                        //          m_MV_DataType = TE_DATA_TYPE.MP_DATA_TYPE_METAVALUE,
+                        //          m_MV_MetaCode = (ushort)TE_METAVARIABLE_CODE.MetaCode_MV_UD1
+                        //      });
+                        //      bool test = ctrl.PostUpdateMetaVariableAdvanced(client, new List<MetaVariableInfo>() { new MetaVariableInfo()
+                        //      {
+                        //          m_ChannelIndexInGlobal = 21,
+                        //          m_MV_MetaCode = 52,
+                        //          m_fMV_Value = current,
+                        //      }
+                        //      }, out int nError);
+                        //      while (testData.SetMetaVariableFeed == null) //currently staying null the whole time
+                        //      {
+                        //          if (testData.SetMetaVariableFeed != null)
+                        //          {
+                        //              Console.WriteLine(testData.SetMetaVariableFeed.Result == ArbinCommandSetMetaVariableFeed.SET_MV_RESULT.CTI_SET_MV_SUCCESS);
+                        //          }
+                        //          Thread.Sleep(1000);
+
+                        //      }
+                        //  }
+
+
+                        watch.Stop();
+                        var elapsedTime = watch.ElapsedMilliseconds;
+                        Console.WriteLine("One loop took " + elapsedTime + " milliseconds");
+
+
+                        //Thread.Sleep(5000);
+
+                        //    //TO DO
+                        //    //determine how fast we can obtain and send measurements
+                        //    //make decision about meta variable
+
+
+                        //    //send measurements to python for feature engineering
+
+                    }
+
+                    break;
+                }
+            }
+
+
+
+        }
+
+        public void pythonSetup()
+        {
+            //setup for Python.NET
+            var pathToVirtualEnv = @"C:\Users\Arbin\source\repos\maggyo\Arbin-CTI\venv";
+            var path = Environment.GetEnvironmentVariable("PATH").TrimEnd(';');
+
+            path = string.IsNullOrEmpty(path) ? pathToVirtualEnv : path + ";" + pathToVirtualEnv;
+            Environment.SetEnvironmentVariable("PYTHONPATH", $"{pathToVirtualEnv}\\Lib\\site-packages;{pathToVirtualEnv}\\Lib", EnvironmentVariableTarget.Process);
+
+            string pythonDll = @"C:\Users\Arbin\AppData\Local\Programs\Python\Python310\python310.dll";
+            Environment.SetEnvironmentVariable("PYTHONNET_PYDLL", pythonDll);
+            Runtime.PythonDLL = pythonDll;
+
+            try
+            {
+                PythonEngine.Initialize();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine();
+                Console.WriteLine(e.ToString());
+            }
+
+            string additional = $"{pathToVirtualEnv};{pathToVirtualEnv}\\Lib\\site-packages;{pathToVirtualEnv}\\Lib";
+            PythonEngine.PythonPath = PythonEngine.PythonPath + ";" + additional;
+            PythonEngine.PythonPath = PythonEngine.PythonPath + ";" + @"C:\Users\Arbin\source\repos\maggyo\Arbin-CTI";
+        }
+
+        public double modelPrediction(double[,] input_data, int channel_num)
+        {
+            //obtain model predictions and return predicted anode potential
+            using (Py.GIL())
+            {
+
+                dynamic os = Py.Import("os");
+                dynamic sys = Py.Import("sys");
+                sys.path.append(os.path.dirname(os.path.expanduser(@"..\..\..\..\..\maggyo\Arbin-CTI\model_prediction")));
+                var fromFile = Py.Import(Path.GetFileNameWithoutExtension(@"..\..\..\..\..\maggyo\Arbin-CTI\model_prediction.py"));
+
+
+                dynamic np = Py.Import("numpy");
+
+                // Call the predict function with real-time input data
+                PyObject data = np.fromiter(input_data, "double");
+                PyObject ch =  channel_num.ToPython();
+
+                object result = fromFile.InvokeMethod("predict", data, ch);
+                double temp = double.Parse(result.ToString());
+
+                return temp;
+
+            }
+        }
+
+        /// <summary>
+        /// This method implements the dynamic charging protocol for 3E cells.
+        /// It does not use ML and is not intended for use with 2E cells.
+        /// </summary>
+        public void dynamicCharging()
+        {
+            //setup connection
+            testData = new MyTestData();
+            ctrl = new MyArbinControl(testData);
+            ctrl.Start();
+            client = new ArbinClient();
+            client.OnConnectionChanged += (IArbinSocket Socket, ArbinSocketEventArgSet.SocketConnectionEventArgs e) =>
+            {
+                connected = e.Connected;
+            };
+            ctrl.ListenSocketRecv(client);
+            int number = client.ConnectAsync(MyIP, 9031, 1000, out int err);
+            bool temp = false;
+            while (true)
+            {
+                if (connected.HasValue)
+                {
+                    ctrl.PostLogicConnect(client, true);
+                    temp = ctrl.PostUserLogin(client, UserName, Password);
+                    Console.WriteLine("Login successful");
+                    break;
+                }
+            }
+            connected = client.IsConnected();
+            ctrl.PostGetChannelsData(client,
+           (uint)ArbinCommandGetChannelDataFeed.GET_CHANNELS_INFO_NEED_TYPE.THIRD_PARTY_GET_CHANNELS_INFO_NEED_TYPE_AUX);
+
+            DateTime dateTime = DateTime.UtcNow.Date;
+            string fileName = dateTime.ToString("MMddyyyy");
+            string myfile = @"C:\Users\Arbin\source\repos\maggyo\Arbin-CTI\dynamic_charging_output_" + fileName + ".txt";
+
+            while (true)
+            {
+                //if successfully connected, will begin data measurement
+                if (testData.GetChannelDataFeed != null)
+                {
+                    ctrl.PostGetChannelsData(client,
+                    (uint)ArbinCommandGetChannelDataFeed.GET_CHANNELS_INFO_NEED_TYPE.THIRD_PARTY_GET_CHANNELS_INFO_NEED_TYPE_AUX);
+
+                    //initialize current to starting value. Assumes cells are not charging at time of program start.
+                    float[] current = new float[Chnl_3E.Count];
+                    int[] count = new int[Chnl_3E.Count];
+                    double[] prevVal = new double[Chnl_3E.Count];
+                    for(int index = 0; index< Chnl_3E.Count; index++)
+                    {
+                        current[index] = 0.00318f;
+                        count[index] = 0;
+                        prevVal[index] = -1;
+                    }
+                    Random random = new Random();
+                    //MAKE SURE TO STOP THE CODE WHEN YOU ARE DONE USING THE CHANNEL
+                    while (true)
+                    {
+                        string output = "";
+                        string outputTime = "";
+                        string outputVoltage = "";
+                        int unactiveTracker = 0;
+                        for(int index = 0; index < Chnl_3E.Count; index++)
+                        {
+                            
+                            float anodeVoltage = 0f;
+
+                            //call twice to force update?
+                            ctrl.PostGetChannelsData(client,
+                            (uint)ArbinCommandGetChannelDataFeed.GET_CHANNELS_INFO_NEED_TYPE.THIRD_PARTY_GET_CHANNELS_INFO_NEED_TYPE_AUX);
+
+
+                            //ctrl.PostGetChannelsData(client,
+                            //(uint)ArbinCommandGetChannelDataFeed.GET_CHANNELS_INFO_NEED_TYPE.THIRD_PARTY_GET_CHANNELS_INFO_NEED_TYPE_AUX);
+                            
+                            if ("Finished" == testData.GetChannelDataFeed.m_Channels[Chnl_3E[index]].Status.ToString())
+                            {
+                                //check roughly every minute
+                                if(unactiveTracker >= 60)
+                                {
+                                    Console.WriteLine("Not monitoring channel " + (Chnl_3E[index] + 1).ToString());
+                                    unactiveTracker = 0;
+                                }
+                                unactiveTracker++;
+                                continue;
+                            }
+
+                            anodeVoltage = testData.GetChannelDataFeed.m_Channels[Chnl_3E[index]].Auxs[0][0].Value;
+                            outputTime += testData.GetChannelDataFeed.m_Channels[Chnl_3E[index]].TestTime.ToString("0.0000") + "\t\t";
+                            outputVoltage += testData.GetChannelDataFeed.m_Channels[Chnl_3E[index]].Voltage.ToString("0.0000") + "\t\t";
+
+
+                            String step = testData.GetChannelDataFeed.m_Channels[Chnl_3E[index]].StepAndCycle;
+                            int start = step.IndexOf("]") + 1;
+                            int end = step.IndexOf(":") - start;
+                            int stepIndex = Int32.Parse(step.Substring(start, end));
+                            bool change = false;
+
+                            if (("Discharge" == testData.GetChannelDataFeed.m_Channels[Chnl_3E[index]].Status.ToString()) && count[index] > 0)
+                            {
+                                count[index] = 0;
+                                current[index] = 0.00318f; //adjust current value back to 1C
+                                change = true;
+                                Console.WriteLine("Reset charging current for channel " + (Chnl_3E[index]+1).ToString());
+                            }
+                            //change in value should be at least one second
+                            else if ((testData.GetChannelDataFeed.m_Channels[Chnl_3E[index]].TestTime - prevVal[index] >= 5.0) && 
+                                ("Charge" == testData.GetChannelDataFeed.m_Channels[Chnl_3E[index]].Status.ToString()) && (count[index] < 2) && (stepIndex > 9) && (anodeVoltage <= -0.03))
+                            {
+                                count[index]++;
+                                current[index] -= 0.000954f; //adjust current value//step size = 0.3c
+                                change = true;
+                                Console.WriteLine("Update charging current for channel " + (Chnl_3E[index] + 1).ToString());
+                            }
+
+
+
+                            //change = true;
+                            //current[index] = (float)(random.NextDouble());
+
+                            if (change)
+                            {
+                                prevVal[index] = testData.GetChannelDataFeed.m_Channels[Chnl_3E[index]].TestTime;
+
+                                List<ArbinCommandGetMetaVariablesFeed.MetaVariableInfo> myVariableList = new List<ArbinCommandGetMetaVariablesFeed.MetaVariableInfo>();
+                                myVariableList.Add(new ArbinCommandGetMetaVariablesFeed.MetaVariableInfo()
+                                {
+                                    //make sure to edit TestConfig.txt so the desired channel is changed (watch out, ArbinCTI uses zero-indexing!)
+
+                                    m_Channel = Chnl_3E[index],
+                                    m_MV_DataType = TE_DATA_TYPE.MP_DATA_TYPE_METAVALUE,
+                                    m_MV_MetaCode = (ushort)TE_METAVARIABLE_CODE.MetaCode_MV_UD1
+                                });
+
+                                //assign the current value
+                                bool test = ctrl.PostUpdateMetaVariableAdvanced(client, new List<MetaVariableInfo>() { new MetaVariableInfo()
+                                {
+                                    m_ChannelIndexInGlobal = Chnl_3E[index],
+                                    m_MV_MetaCode = 52,
+                                    m_fMV_Value = current[index],
+                                }
+                                }, out int nError);
+
+
+                                while (testData.SetMetaVariableFeed == null) //make sure meta variable was changed
+                                {
+                                    if (testData.SetMetaVariableFeed != null)
+                                    {
+                                        Console.WriteLine(testData.SetMetaVariableFeed.Result == ArbinCommandSetMetaVariableFeed.SET_MV_RESULT.CTI_SET_MV_SUCCESS);
+                                    }
+                                    //Thread.Sleep(5000);
+                                    ctrl.PostGetChannelsData(client,
+                                    (uint)ArbinCommandGetChannelDataFeed.GET_CHANNELS_INFO_NEED_TYPE.THIRD_PARTY_GET_CHANNELS_INFO_NEED_TYPE_AUX);
+                                    //ctrl.PostGetChannelsData(client,
+                                    //(uint)ArbinCommandGetChannelDataFeed.GET_CHANNELS_INFO_NEED_TYPE.THIRD_PARTY_GET_CHANNELS_INFO_NEED_TYPE_AUX);
+                                    break;
+                                }
+                            }
+
+
+                            
+
+
+                            output += anodeVoltage.ToString("0.00000") + "\t\t";
+                        }
+                        
+                        using(StreamWriter sw = File.AppendText(myfile))
+                        {
+                            sw.WriteLine(output);
+                            sw.WriteLine(outputTime);
+                            sw.WriteLine(outputVoltage);
+                            foreach (float vals in current)
+                            {
+                                sw.Write(vals.ToString("0.00000") + "\t\t");
+                            }
+                            sw.WriteLine("\n");
+                            //sw.Close();
+                        }
+
+                        Console.WriteLine(output);
+                        Console.WriteLine(outputTime);
+                        Console.WriteLine(outputVoltage);
+
+                        //print out current
+                        foreach (float vals in current)
+                        {
+                            Console.Write(vals.ToString("0.00000") + "\t\t");
+                        }
+                        Console.WriteLine("\n");
+
+                        //Check every 20 seconds
+                        Thread.Sleep(1000);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// This method implements the dynamic charging protocol for 3E and 2E cells.
+        /// It can handle both 3E and 2E dynamic charging cells.
+        /// </summary>
+        public void threeEandtwoE()
+        {
+            //setup connection
+            testData = new MyTestData();
+            ctrl = new MyArbinControl(testData);
+            ctrl.Start();
+            client = new ArbinClient();
+            client.OnConnectionChanged += (IArbinSocket Socket, ArbinSocketEventArgSet.SocketConnectionEventArgs e) =>
+            {
+                connected = e.Connected;
+            };
+            ctrl.ListenSocketRecv(client);
+            int number = client.ConnectAsync(MyIP, 9031, 1000, out int err);
+            bool temp = false;
+            while (true)
+            {
+                if (connected.HasValue)
+                {
+                    ctrl.PostLogicConnect(client, true);
+                    temp = ctrl.PostUserLogin(client, UserName, Password);
+                    Console.WriteLine("Login successful");
+                    break;
+                }
+            }
+            connected = client.IsConnected();
+            ctrl.PostGetChannelsData(client,
+           (uint)ArbinCommandGetChannelDataFeed.GET_CHANNELS_INFO_NEED_TYPE.THIRD_PARTY_GET_CHANNELS_INFO_NEED_TYPE_AUX);
+
+            DateTime dateTime = DateTime.UtcNow.Date;
+            string fileName = dateTime.ToString("MMddyyyy");
+            string myfile = @"C:\Users\Arbin\source\repos\maggyo\Arbin-CTI\threeEandTwoE_charging_output_" + fileName + ".txt";
+
+            while (true)
+            {
+                //if successfully connected, will begin data measurement
+                if (testData.GetChannelDataFeed != null)
+                {
+                    pythonSetup();
+                    //int total = 
+                    
+                    double[][, ] input_datas = new double[Chnl_2E.Count][,];
+                    double[][, ] temp_arr = new double[Chnl_2E.Count][,];
+                    for(int i = 0; i < Chnl_2E.Count; i++)
+                    {
+                        input_datas[i] = new double[5, 6];
+                        temp_arr[i] = new double[5, 5];
+                    }
+
+                    double[] input_data = new double[5];
+
+                    double[] threshold = new double[Chnl_3E.Count + Chnl_2E.Count]; // anode voltage threshold. Can be changed for all cells
+
+                    double throughput = 0;
+
+                    int row_num = 0;
+
+
+                    ctrl.PostGetChannelsData(client,
+                    (uint)ArbinCommandGetChannelDataFeed.GET_CHANNELS_INFO_NEED_TYPE.THIRD_PARTY_GET_CHANNELS_INFO_NEED_TYPE_AUX);
+
+                    //initialize current to starting value. Assumes cells are not charging at time of program start.
+                    float[] current = new float[Chnl_3E.Count + Chnl_2E.Count];
+                    int[] count = new int[Chnl_3E.Count + Chnl_2E.Count];
+                    double[] prevVal = new double[Chnl_3E.Count + Chnl_2E.Count];
+                    for (int index = 0; index < Chnl_3E.Count + Chnl_2E.Count; index++)
+                    {
+                        current[index] = 0.00318f;
+                        count[index] = 0;
+                        prevVal[index] = -1;
+                        threshold[index] = 0;
+                    }
+                    Random random = new Random();
+                    //MAKE SURE TO STOP THE CODE WHEN YOU ARE DONE USING THE CHANNEL
+                    while (true)
+                    {
+                        string output = "";
+                        string outputTime = "";
+                        string outputVoltage = "";
+                        int unactiveTracker = 0;
+                        int timeTracker = 0;
+                        for (int index = 0; index < Chnl_3E.Count + Chnl_2E.Count; index++)
+                        {
+
+                            float anodeVoltage = 0f;
+
+                            //obtain data
+                            ctrl.PostGetChannelsData(client,
+                            (uint)ArbinCommandGetChannelDataFeed.GET_CHANNELS_INFO_NEED_TYPE.THIRD_PARTY_GET_CHANNELS_INFO_NEED_TYPE_AUX);
+
+
+  
+                            if ("Finished" == testData.GetChannelDataFeed.m_Channels[Chnl[index]].Status.ToString())
+                            {
+                                //check roughly every minute
+                                if (unactiveTracker >= 60)
+                                {
+                                    Console.WriteLine("Not monitoring channel " + (Chnl[index] + 1).ToString());
+                                    unactiveTracker = 0;
+                                }
+                                unactiveTracker++;
+                                continue;
+                            }
+
+                            anodeVoltage = "\t\t";
+                            outputTime += testData.GetChannelDataFeed.m_Channels[Chnl[index]].TestTime.ToString("0.0000") + "\t\t";
+                            outputVoltage += testData.GetChannelDataFeed.m_Channels[Chnl[index]].Voltage.ToString("0.0000") + "\t\t";
+                            int index2E = index - Chnl_3E.Count;
+                            if (index >= Chnl_3E.Count)
+                            {
+                                
+                                if (input_datas[index2E][4,0] == 0) // still unfilled
+                                {
+                 
+
+                                    //populate first columns for past data retrieval
+                                    input_datas[index2E][4 - timeTracker, 0] = testData.GetChannelDataFeed.m_Channels[0].Voltage;
+                                    input_datas[index2E][4 - timeTracker, 1] = testData.GetChannelDataFeed.m_Channels[0].Power;
+                                    input_datas[index2E][4 - timeTracker, 2] = testData.GetChannelDataFeed.m_Channels[0].Current;
+                                    input_datas[index2E][4 - timeTracker, 3] = testData.GetChannelDataFeed.m_Channels[0].ChargeCapacity;
+                                    input_datas[index2E][4 - timeTracker, 4] = testData.GetChannelDataFeed.m_Channels[0].ChargeEnergy;
+                                    input_datas[index2E][4 - timeTracker, 5] = throughput;
+
+                                    //get measurements every 2 seconds
+                                    //Thread.Sleep(2000);
+                                    if (index == Chnl_3E.Count) // update 
+                                        timeTracker++;
+
+                                    continue;
+                                }
+
+                                //if (count % 2 == 0)
+                                //{
+                                //    Thread.Sleep(2000);
+                                //    continue;
+                                //}
+
+                                //update past data array
+                                for (int j = input_datas[index2E].GetUpperBound(0); j >= 0; j--)
+                                {
+                                    for (int k = 0; k < input_datas[index2E].GetUpperBound(1) + 1; k++)
+                                    {
+                                        if (j == 0)
+                                            input_datas[index2E][j, k] = 0;
+                                        else
+                                            input_datas[index2E][j, k] = input_datas[index2E][j - 1, k];
+                                    }
+                                }
+
+                                //get present measurements
+                                input_datas[index2E][0, 0] = testData.GetChannelDataFeed.m_Channels[0].Voltage;
+                                input_datas[index2E][0, 1] = testData.GetChannelDataFeed.m_Channels[0].Power;
+                                input_datas[index2E][0, 2] = testData.GetChannelDataFeed.m_Channels[0].Current;
+                                input_datas[index2E][0, 3] = testData.GetChannelDataFeed.m_Channels[0].ChargeCapacity;
+                                input_datas[index2E][0, 4] = testData.GetChannelDataFeed.m_Channels[0].ChargeEnergy;
+                            }    
+
+                            String step = testData.GetChannelDataFeed.m_Channels[Chnl[index]].StepAndCycle;
+                            int start = step.IndexOf("]") + 1;
+                            int end = step.IndexOf(":") - start;
+                            int stepIndex = Int32.Parse(step.Substring(start, end));
+                            bool change = false;
+
+                            if (("Discharge" == testData.GetChannelDataFeed.m_Channels[Chnl[index]].Status.ToString()) && count[index] > 0)
+                            {
+                                count[index] = 0;
+                                current[index] = 0.00318f; //adjust current value back to 1C
+                                change = true;
+                                Console.WriteLine("Reset charging current for channel " + (Chnl[index] + 1).ToString());
+                            }
+                            //change in value should be at least one second
+                            else if ((testData.GetChannelDataFeed.m_Channels[Chnl[index]].TestTime - prevVal[index] >= 5.0) &&
+                                ("Charge" == testData.GetChannelDataFeed.m_Channels[Chnl[index]].Status.ToString()) && (count[index] < 2) && (stepIndex > 9))
+                            {
+
+                                if(index >= Chnl_3E.Count)
+                                {
+                                    anodeVoltage = (float)modelPrediction(input_datas[index2E], Chnl[index]);
+                                }
+                                else
+                                {
+                                    anodeVoltage = testData.GetChannelDataFeed.m_Channels[Chnl[index]].Auxs[0][0].Value;
+                                }
+
+                                if (((index >= Chnl_3E.Count) && (anodeVoltage <= threshold[index])) || 
+                                    ((index < Chnl_3E.Count) && (anodeVoltage <= threshold[index])))
+                                {
+
+                                    count[index]++;
+                                    current[index] -= 0.000954f; //adjust current value//step size = 0.3c
+                                    change = true;
+                                    Console.WriteLine("Update charging current for channel " + (Chnl[index] + 1).ToString());
+                                }
+
+                            }    
+
+
+        
+
+
+
+                            if (change)
+                            {
+                                prevVal[index] = testData.GetChannelDataFeed.m_Channels[Chnl[index]].TestTime;
+
+                                List<ArbinCommandGetMetaVariablesFeed.MetaVariableInfo> myVariableList = new List<ArbinCommandGetMetaVariablesFeed.MetaVariableInfo>();
+                                myVariableList.Add(new ArbinCommandGetMetaVariablesFeed.MetaVariableInfo()
+                                {
+                                    //make sure to edit TestConfig.txt so the desired channel is changed (watch out, ArbinCTI uses zero-indexing!)
+
+                                    m_Channel = Chnl[index],
+                                    m_MV_DataType = TE_DATA_TYPE.MP_DATA_TYPE_METAVALUE,
+                                    m_MV_MetaCode = (ushort)TE_METAVARIABLE_CODE.MetaCode_MV_UD1
+                                });
+
+                                //assign the current value
+                                bool test = ctrl.PostUpdateMetaVariableAdvanced(client, new List<MetaVariableInfo>() { new MetaVariableInfo()
+                                {
+                                    m_ChannelIndexInGlobal = Chnl[index],
+                                    m_MV_MetaCode = 52,
+                                    m_fMV_Value = current[index],
+                                }
+                                }, out int nError);
+
+
+                                while (testData.SetMetaVariableFeed == null) //make sure meta variable was changed
+                                {
+                                    if (testData.SetMetaVariableFeed != null)
+                                    {
+                                        Console.WriteLine(testData.SetMetaVariableFeed.Result == ArbinCommandSetMetaVariableFeed.SET_MV_RESULT.CTI_SET_MV_SUCCESS);
+                                    }
+
+                                    ctrl.PostGetChannelsData(client,
+                                    (uint)ArbinCommandGetChannelDataFeed.GET_CHANNELS_INFO_NEED_TYPE.THIRD_PARTY_GET_CHANNELS_INFO_NEED_TYPE_AUX);
+                                    break;
+                                }
+                            }
+
+
+
+
+
+                            output += anodeVoltage.ToString("0.00000") + "\t\t";
+                        }
+
+                        using (StreamWriter sw = File.AppendText(myfile))
+                        {
+                            sw.WriteLine(output);
+                            sw.WriteLine(outputTime);
+                            sw.WriteLine(outputVoltage);
+                            foreach (float vals in current)
+                            {
+                                sw.Write(vals.ToString("0.00000") + "\t\t");
+                            }
+                            sw.WriteLine("\n");
+                            //sw.Close();
+                        }
+
+                        Console.WriteLine(output);
+                        Console.WriteLine(outputTime);
+                        Console.WriteLine(outputVoltage);
+
+                        //print out current
+                        foreach (float vals in current)
+                        {
+                            Console.Write(vals.ToString("0.00000") + "\t\t");
+                        }
+                        Console.WriteLine("\n");
+
+                        //Check every 20 seconds
+                        Thread.Sleep(2000);
+                    }
+                }
+            }
+
+
+     
+
+
+        }
+
+        public void determineChannels()
+        {
+            string[] words = lines[7].Split(' ');
+            foreach (var word in words)
+            {
+                if (words.Length == 1)
+                    continue;
+               // Console.WriteLine(word);
+                Chnl.Add(ushort.Parse(word));
+                Chnl_3E.Add(ushort.Parse(word));
+                //System.Console.WriteLine($"<{word}>");
+                Console.WriteLine(Chnl.Last());
+            }
+            string[] wordsTwo = lines[8].Split(' ');
+            foreach (var word in wordsTwo)
+            {
+                Chnl.Add(ushort.Parse(word));
+                Chnl_2E.Add(ushort.Parse(word));
+                //System.Console.WriteLine($"<{word}>");
+                Console.WriteLine(Chnl.Last());
+            }
+
+            Console.WriteLine(Chnl.Count + " channels");
+            //Thread.Sleep(10000);
+        }
+
+        /// <summary>
+        /// This is a test project for CTI.
+        /// experiment with obtaining real-time measurements.
+        /// </summary>
+        public void runPythonCode()
+        {
+            Thread.Sleep(1000);
+            //Runtime.PythonDLL = @"C:\Users\Arbin\AppData\Local\Programs\Python\Python310\python310.dll";
+
+            var pathToVirtualEnv = @"C:\Users\Arbin\source\repos\maggyo\Arbin-CTI\venv";
+
+            var path = Environment.GetEnvironmentVariable("PATH").TrimEnd(';');
+            path = string.IsNullOrEmpty(path) ? pathToVirtualEnv : path + ";" + pathToVirtualEnv;
+            //Environment.SetEnvironmentVariable("PATH", path, EnvironmentVariableTarget.Process);
+            //Environment.SetEnvironmentVariable("PYTHONHOME", pathToVirtualEnv, EnvironmentVariableTarget.Process);
+
+            Environment.SetEnvironmentVariable("PYTHONPATH", $"{pathToVirtualEnv}\\Lib\\site-packages;{pathToVirtualEnv}\\Lib", EnvironmentVariableTarget.Process);
+
+            Console.WriteLine("asdf");
+            //PythonEngine.PythonPath = Environment.GetEnvironmentVariable("PYTHONPATH", EnvironmentVariableTarget.Process);
+            //PythonEngine.PythonHome = pathToVirtualEnv;]
+
+ 
+
+            // Console.WriteLine(Environment.GetEnvironmentVariable("PYTHONHOME"));
+            Console.WriteLine(Environment.GetEnvironmentVariable("PYTHONPATH"));
+            //Console.WriteLine(Environment.GetEnvironmentVariable("PATH"));
+
+            string pythonDll = @"C:\Users\Arbin\AppData\Local\Programs\Python\Python310\python310.dll";
+            Environment.SetEnvironmentVariable("PYTHONNET_PYDLL", pythonDll);
+            Runtime.PythonDLL = pythonDll;
+
+       
+            try
+            {
+                PythonEngine.Initialize();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine();
+                Console.WriteLine(e.ToString());
+            }
+
+            Console.WriteLine(PythonEngine.PythonPath);
+            Console.WriteLine(PythonEngine.PythonHome);
+
+            string additional = $"{pathToVirtualEnv};{pathToVirtualEnv}\\Lib\\site-packages;{pathToVirtualEnv}\\Lib";
+            PythonEngine.PythonPath = PythonEngine.PythonPath + ";" + additional;
+            PythonEngine.PythonPath = PythonEngine.PythonPath + ";" + @"C:\Users\Arbin\source\repos\maggyo\Arbin-CTI";
+
+            Console.WriteLine("asdf");
+
+            //FileInfo f = new FileInfo("TestConfig.txt");
+            //Console.WriteLine(f.FullName);
+
+
+            //string pythonDll = @"C:\Users\Arbin\AppData\Local\Programs\Python\Python310\python310.dll";
+            //Environment.SetEnvironmentVariable("PYTHONNET_PYDLL", pythonDll);
+            //PythonEngine.Initialize();
+
+
+
+
+            using (Py.GIL())
+            {
+                //PythonEngine.RunSimpleString("asdf");
+
+
+                Console.WriteLine(Directory.GetCurrentDirectory());
+                Console.WriteLine(File.Exists(@"..\..\..\..\..\maggyo\Arbin-CTI\model_prediction.py"));
+
+                dynamic os = Py.Import("os");
+                dynamic sys = Py.Import("sys");
+                sys.path.append(os.path.dirname(os.path.expanduser(@"..\..\..\..\..\maggyo\Arbin-CTI\model_prediction")));
+                var fromFile = Py.Import(Path.GetFileNameWithoutExtension(@"..\..\..\..\..\maggyo\Arbin-CTI\model_prediction.py"));
+
+           
+
+                dynamic np = Py.Import("numpy");
+                // Call the predict function with real-time input data
+                double[] input_data = { 0.1, 0.2, 0.3, 0.4, 0.5 };
+                PyObject data = np.fromiter(input_data, "double");
+
+                object result = fromFile.InvokeMethod("predict",data);
+                Console.WriteLine(result);
+
+                Random random = new Random();
+                double[] values = new double[5];
+                for (int i = 0; i < 5; ++i)
+                    values[i] = random.NextDouble();
+
+
+                for (int i = 0; i < 100; i++)
+                {
+                    for (int j = 0; j < 5; ++j)
+                        input_data[j] = random.NextDouble();
+
+                    data = np.fromiter(input_data, "double");
+
+                   
+                    result = fromFile.InvokeMethod("predict", data);
+                    Console.WriteLine(result);
+                    Thread.Sleep(1000);
+
+                    //send measurements to python for feature engineering
+                    //receive prediction for anode potential
+                    //make decision about meta variable
+                }
+            }   
+    
+
+        }
+    }
+
+
+
+    class TestClass
+    {
+        static void Main(string[] args)
+        {
+            ArbinClientTests tests = new ArbinClientTests();
+
+            //tests.RetrieveDataTest();
+            //tests.runPythonCode();
+
+            //run real-time ML prediction module
+            //tests.realTimeMachineLearning();
+
+            //run real-time current adjustment module. Uses 3E measurement to adjust current
+            tests.determineChannels();
+            //tests.dynamicCharging();
+            tests.threeEandtwoE();
+
+            
+        }
+    }
+
+}

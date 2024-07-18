@@ -1,0 +1,15 @@
+2 2E ensemble.py 0.00318 0.02
+6 2E ensemble.py 0.00318 -0.02
+
+//channelNum cellType modelName startingCurrent threshold
+
+//To make a change, please delete the entire line, do ctrl + S, then add in the new channel, then do ctrl + S again
+//	Please verify that the cell was deleted (check Console) before adding it
+//      There should be no empty lines in the entries 
+
+
+2 2E gp.py 0.00318 0
+
+//reference_data (for overpotential) must match used channels. No prediction will be made if the corresponding channel does not exist.
+//export data to csv? would make visualization easier instead of using text
+//make sure changing one channel does not affect others

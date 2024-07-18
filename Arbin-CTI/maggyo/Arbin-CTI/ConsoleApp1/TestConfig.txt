@@ -1,0 +1,19 @@
+196.168.1.100
+Admin
+000000
+aki_test_dynamic+220815.sdx
+220815
+0.0002
+CTI_Investigation
+
+11 14 17
+24
+../Work
+
+
+//For channel index specification, remember to use zero-indexing (and use spaces between channels)
+//line above "24" is where you specify 2E channels. So it'll look something like this:
+
+//0 1  -> 3E
+//10 11 -> 2E
+//24 -> wrong channel index
