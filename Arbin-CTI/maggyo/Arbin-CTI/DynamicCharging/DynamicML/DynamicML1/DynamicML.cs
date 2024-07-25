@@ -1,7 +1,8 @@
 ﻿/*
 * ==============================================================================
-* Filename: ArbinClientTests
-* Description: This file contains test methods for testing various functions of ArbinClient class.
+* Filename: DynamicML.cs
+* Description: This file contains methods for running real-time machine learning predictions and dynamic charging protocols for 3E and 2E cells.
+* This code only applies to Arbin systems with the CTI software. Written in C#
 * ==============================================================================
 */
 using System;
@@ -33,7 +34,9 @@ namespace ArbinCTI.Core
         private MyArbinControl ctrl;
         MyTestData testData;
         private bool? connected;
-        static string[] lines = File.ReadAllLines(@"D:\source\repos\maggyo\Arbin-CTI\TestConfig.txt");
+
+        private string root = @"D:\source\repos\maggyo\Arbin-CTI";
+        static string[] lines = File.ReadAllLines(root + "\TestConfig.txt");
         private readonly string MyIP = lines[0];
         private readonly string UserName = lines[1];
         private readonly string Password = lines[2];
@@ -288,16 +291,20 @@ namespace ArbinCTI.Core
         }
 
 
+        /// <summary>
+        /// This method sets up the Python environment for real-time machine learning predictions.
+        /// </summary>
+        /// 
         public void pythonSetup()
         {
             //setup for Python.NET
-            var pathToVirtualEnv = @"D:\source\repos\maggyo\Arbin-CTI\venv";
+            var pathToVirtualEnv = root + "\venv"; //path to virtual environment
             var path = Environment.GetEnvironmentVariable("PATH").TrimEnd(';');
 
             path = string.IsNullOrEmpty(path) ? pathToVirtualEnv : path + ";" + pathToVirtualEnv;
             Environment.SetEnvironmentVariable("PYTHONPATH", $"{pathToVirtualEnv}\\Lib\\site-packages;{pathToVirtualEnv}\\Lib", EnvironmentVariableTarget.Process);
 
-            string pythonDll = @"C:\Users\Arbin\AppData\Local\Programs\Python\Python310\python310.dll";
+            string pythonDll = @"C:\Users\Arbin\AppData\Local\Programs\Python\Python310\python310.dll"; //path to python dll
             Environment.SetEnvironmentVariable("PYTHONNET_PYDLL", pythonDll);
             Runtime.PythonDLL = pythonDll;
 
@@ -313,17 +320,21 @@ namespace ArbinCTI.Core
 
             string additional = $"{pathToVirtualEnv};{pathToVirtualEnv}\\Lib\\site-packages;{pathToVirtualEnv}\\Lib";
             PythonEngine.PythonPath = PythonEngine.PythonPath + ";" + additional;
-            PythonEngine.PythonPath = PythonEngine.PythonPath + ";" + @"D:\source\repos\maggyo\Arbin-CTI";
+            PythonEngine.PythonPath = PythonEngine.PythonPath + ";" + root + "";
 
             using (Py.GIL())
             {
                 dynamic os = Py.Import("os");
                 dynamic sys = Py.Import("sys");
-                sys.path.append(os.path.dirname(os.path.expanduser(@"D:\source\repos\maggyo\Arbin-CTI\models\ensemble"))); //add paths 
-                sys.path.append(os.path.dirname(os.path.expanduser(@"D:\source\repos\maggyo\Arbin-CTI\models\gp")));
+                sys.path.append(os.path.dirname(os.path.expanduser(root + "\models\ensemble"))); //add paths for python ML models
+                sys.path.append(os.path.dirname(os.path.expanduser(root + "\models\gp")));
             }
         }
 
+        /// <summary>
+        /// This method calls the python script to make real-time predictions.
+        /// </summary>
+        /// 
         public double modelPrediction(int index)
         {
             //obtain model predictions and return predicted anode potential
@@ -333,31 +344,18 @@ namespace ArbinCTI.Core
 
                 dynamic os = Py.Import("os");
                 dynamic sys = Py.Import("sys");
-                sys.path.append(os.path.dirname(os.path.expanduser(@"D:\source\repos\maggyo\Arbin-CTI\models\" + 
+                sys.path.append(os.path.dirname(os.path.expanduser(root + "\\models\\" + 
                     BatteryList[index].ModelName.Substring(0, BatteryList[index].ModelName.Length-3)))); //add paths 
-                var fromFile = Py.Import(Path.GetFileNameWithoutExtension(@"D:\source\repos\maggyo\Arbin-CTI\models\" + BatteryList[index].ModelName));
+                var fromFile = Py.Import(Path.GetFileNameWithoutExtension(root + "\\models\\" + BatteryList[index].ModelName));
 
 
                 dynamic np = Py.Import("numpy");
 
                 // Call the predict function with real-time input data
-                PyObject data = np.fromiter(BatteryList[index].GetInputDatas(), "double"); //will this copy be removed from memory???
+                PyObject data = np.fromiter(BatteryList[index].GetInputDatas(), "double");
                 int chan = BatteryList[index].ChannelNum - 1;
                 PyObject ch = chan.ToPython();
 
-                //for (int i = 0; i < 5; i++)
-                //{
-                //    for (int j = 0; j < 6; j++)
-                //        Console.Write(BatteryList[index].GetInputDatas()[i, j] + " ");
-                //    Console.WriteLine();
-                //}
-
-                //Random random = new Random();
-                //double[,] values = new double[5,6];
-                //for (int i = 0; i < 5; ++i)
-                //    for(int j = 0; j<6; j++)
-                //     values[i,j] = random.NextDouble()/1000;
-                //data = np.fromiter(values, "double");
 
                 object result = fromFile.InvokeMethod("predict", data, ch);
                 double temp = double.Parse(result.ToString());
@@ -373,12 +371,10 @@ namespace ArbinCTI.Core
         }
 
 
+  
         /// <summary>
-        /// This method implements the dynamic charging protocol for 3E and 2E cells.
-        /// It can handle both 3E and 2E dynamic charging cells.
+        ///  This method implements the setup procedure for connecting to the Arbin cycler.
         /// </summary>
-        /// 
-        
         public void startCTI()
         {
             //setup connection
@@ -407,6 +403,12 @@ namespace ArbinCTI.Core
             ctrl.PostGetChannelsData(client,
            (uint)ArbinCommandGetChannelDataFeed.GET_CHANNELS_INFO_NEED_TYPE.THIRD_PARTY_GET_CHANNELS_INFO_NEED_TYPE_AUX);
         }
+
+        /// <summary>
+        /// This method implements the dynamic charging protocol for 3E and 2E cells.
+        /// It can handle both 3E and 2E dynamic charging cells.
+        /// </summary>
+        /// 
         public async void threeEandtwoE()
         {
             startCTI();
@@ -421,9 +423,6 @@ namespace ArbinCTI.Core
                 if (testData.GetChannelDataFeed != null)
                 {
                     pythonSetup();
-
-                    //ctrl.PostGetChannelsData(client,
-                    //(uint)ArbinCommandGetChannelDataFeed.GET_CHANNELS_INFO_NEED_TYPE.THIRD_PARTY_GET_CHANNELS_INFO_NEED_TYPE_AUX);
 
                     //initialize current to starting value. Assumes cells are not charging at time of program start.
      
@@ -449,17 +448,11 @@ namespace ArbinCTI.Core
 
                         Console.WriteLine(BatteryList.Count);
                          
-                        
-                        //Wait 2s
 
                         for (int index = 0; index < BatteryList.Count; index++)
                         {
                             
                             float anodeVoltage = 1000f; //default value
-
-                            //  MAYBE UNCOMMENT IF MEASUREMENTS ARE NOT UPDATING EVEN MORE OFTEN
-                           //ctrl.PostGetChannelsData(client,
-                            //(uint)ArbinCommandGetChannelDataFeed.GET_CHANNELS_INFO_NEED_TYPE.THIRD_PARTY_GET_CHANNELS_INFO_NEED_TYPE_AUX);
 
                             ushort channelNum = (ushort)(BatteryList[index].ChannelNum -1);
                             BatteryList[index].Throughput = BatteryList[index].Throughput + 2*Math.Abs(testData.GetChannelDataFeed.m_Channels[channelNum].Current) / 3600; //count two seconds
@@ -479,37 +472,12 @@ namespace ArbinCTI.Core
                             }
 
                             //check that present measurement is unique
-                            //Console.WriteLine($"BatteryList.Time {BatteryList[index].Time}; Feedback.TestTime{testData.GetChannelDataFeed.m_Channels[channelNum].TestTime}");
                             if ((testData.GetChannelDataFeed.m_Channels[channelNum].TestTime - BatteryList[index].Time) < 1e-3)
                                 continue;
 
 
-                            if (BatteryList[index].CellType.Equals("2E")) //only modify for 2 electrode cells
+                            if (BatteryList[index].CellType.Equals("2E")) //only modify input data array for 2 electrode cells
                             {
-
-                                //if (BatteryList[index].GetInputDatas(0,0) == 0) // still unfilled
-                                //{
-                                //    Console.WriteLine(timeTracker + " " + index);
-                                //    //populate first columns for past data retrieval
-                                //    BatteryList[index].SetInputDatas(4 - timeTracker, 0, testData.GetChannelDataFeed.m_Channels[channelNum].Voltage);
-                                //    BatteryList[index].SetInputDatas(4 - timeTracker, 1, testData.GetChannelDataFeed.m_Channels[channelNum].Power);
-                                //    BatteryList[index].SetInputDatas(4 - timeTracker, 2, testData.GetChannelDataFeed.m_Channels[channelNum].Current);
-                                //    BatteryList[index].SetInputDatas(4 - timeTracker, 3, testData.GetChannelDataFeed.m_Channels[channelNum].ChargeCapacity);
-                                //    BatteryList[index].SetInputDatas(4 - timeTracker, 4, testData.GetChannelDataFeed.m_Channels[channelNum].ChargeEnergy);
-                                //    BatteryList[index].SetInputDatas(4 - timeTracker, 5, BatteryList[index].Throughput);
-                                    
-
-                                //    //get measurements every 2 seconds
-                                    
-                                //    if (index == BatteryList.Count - 1) // update 
-                                //    {
-                                //        timeTracker++; //will not be able to handle cases where a cell is resumed mid charging.
-                                        
-                                //    }
-                                        
-
-                                //    continue;
-                                //}
 
 
                                 //update past data array
@@ -535,7 +503,7 @@ namespace ArbinCTI.Core
                             }
 
         
-
+                            //get step and cycle number
                             String step = testData.GetChannelDataFeed.m_Channels[channelNum].StepAndCycle;
                             int start = step.IndexOf("]") + 1;
                             int end = step.IndexOf(":") - start;
@@ -555,13 +523,11 @@ namespace ArbinCTI.Core
                             }
                             //change in value should be at least one second
                             else if (("Charge" == testData.GetChannelDataFeed.m_Channels[channelNum].Status.ToString()) && (stepIndex == 10))
-                                
                             {
 
-                                if (BatteryList[index].CellType.Equals("2E")) //TO DO: ALLOW PRESSURE TOO
+                                if (BatteryList[index].CellType.Equals("2E"))
                                 {
-                                   // Console.WriteLine(stepIndex);
-                                   // Console.WriteLine(channelNum + 1);
+
                                     anodeVoltage = (float)modelPrediction(index);
                                 }
                                 else if(BatteryList[index].CellType.Equals("3E"))
@@ -572,16 +538,12 @@ namespace ArbinCTI.Core
                                 if ((BatteryList[index].GetInputDatas(4,0) != 0.0) && (testData.GetChannelDataFeed.m_Channels[channelNum].TestTime - BatteryList[index].PrevTime >= 15.0) &&
                                      (BatteryList[index].CountChanges < 7) && (anodeVoltage <= BatteryList[index].Threshold) && (testData.GetChannelDataFeed.m_Channels[channelNum].Voltage > 3.32))
                                 {
-
                                     BatteryList[index].CountChanges = BatteryList[index].CountChanges + 1;
                                     BatteryList[index].Current = BatteryList[index].Current - 0.000318f; //adjust current value //step size = 0.05c
                                     change = true;
                                     Console.WriteLine("Update charging current for channel " + (channelNum + 1).ToString());
                                 }
-
                             }
-
-
 
                             if (change) //update meta variable
                             {
@@ -590,7 +552,7 @@ namespace ArbinCTI.Core
                                 List<ArbinCommandGetMetaVariablesFeed.MetaVariableInfo> myVariableList = new List<ArbinCommandGetMetaVariablesFeed.MetaVariableInfo>();
                                 myVariableList.Add(new ArbinCommandGetMetaVariablesFeed.MetaVariableInfo()
                                 {
-                                    //make sure to edit TestConfig.txt so the desired channel is changed (watch out, ArbinCTI uses zero-indexing!)
+                                    //make sure to edit TestConfig.txt so the desired channel is changed (be careful since ArbinCTI uses zero-indexing!)
 
                                     m_Channel = channelNum,
                                     m_MV_DataType = TE_DATA_TYPE.MP_DATA_TYPE_METAVALUE,
@@ -614,8 +576,6 @@ namespace ArbinCTI.Core
                                         Console.WriteLine(testData.SetMetaVariableFeed.Result == ArbinCommandSetMetaVariableFeed.SET_MV_RESULT.CTI_SET_MV_SUCCESS);
                                     }
 
-                                    //ctrl.PostGetChannelsData(client,
-                                    //(uint)ArbinCommandGetChannelDataFeed.GET_CHANNELS_INFO_NEED_TYPE.THIRD_PARTY_GET_CHANNELS_INFO_NEED_TYPE_AUX);
                                     break;
                                 }
                             }
@@ -624,19 +584,9 @@ namespace ArbinCTI.Core
                             BatteryList[index].Voltage = testData.GetChannelDataFeed.m_Channels[channelNum].Voltage;
                             BatteryList[index].Time = testData.GetChannelDataFeed.m_Channels[channelNum].TestTime;
 
-                            string myfile = @"D:\source\repos\maggyo\Arbin-CTI\Output_Data\threeEandTwoE_charging_output_" + fileDate + "_" + "Channel_" + BatteryList[index].ChannelNum + ".txt";
+                            string myfile = root + "\Output_Data\threeEandTwoE_charging_output_" + fileDate + "_" + "Channel_" + BatteryList[index].ChannelNum + ".txt";
 
-                            //var configPersons = new CsvConfiguration(CultureInfo.InvariantCulture)
-                            //{
-                            //    HasHeaderRecord = true;
-                            //};
-                            //using (var stream = File.Open(myfile, FileMode.Append))
-                            //using (var writer = new StreamWriter(stream))
-                            //using (var csv = new CsvWriter(writer, configPersons))
-                            //{
-                            //    csv.WriteRecords(myPersonObjects);
-                            //}
-                            // Do any data wrtiting to files here @jiayi
+                            // Do any data wrtiting to files here 
                             using (StreamWriter sw = File.AppendText(myfile))
                             {
 
@@ -650,21 +600,11 @@ namespace ArbinCTI.Core
                                 sw.Write(testData.GetChannelDataFeed.m_Channels[channelNum].ChargeEnergy + "\t\t");
                                 sw.Write(testData.GetChannelDataFeed.m_Channels[channelNum].Power + "\t\t");
                                 sw.WriteLine(testData.GetChannelDataFeed.m_Channels[channelNum].ChargeCapacity + "\t\t");
-                                //sw.WriteLine(BatteryList[index].Throughput + "\t\t");
-                                //sw.WriteLine("\n");
                                 sw.Close();
                             }
                         }
-
-
-
-
                         determineChannels(); //update channels, if needed
 
-
-                        //Check every 2 seconds
-                        //Thread.Sleep(2000);
-                        //await Task.Delay(2000);
                     }
                 }
             }
@@ -683,19 +623,17 @@ namespace ArbinCTI.Core
             
 
 
-            //cases: cell is added, so it dosn't exist previously
+            //cases: cell is added, so it didn't exist previously
             //       cell is deleted, so the index should be identified and removed
 
-            string[] lines = File.ReadAllLines(@"D:\source\repos\maggyo\Arbin-CTI\ChannelConfig.txt");
-            if (DateTime.Compare(channelConfigLastModified, File.GetLastWriteTime(@"D:\source\repos\maggyo\Arbin-CTI\ChannelConfig.txt")) != 0) { //modified file
-                channelConfigLastModified = File.GetLastWriteTime(@"D:\source\repos\maggyo\Arbin-CTI\ChannelConfig.txt");
+            string[] lines = File.ReadAllLines(root + "\ChannelConfig.txt");
+            if (DateTime.Compare(channelConfigLastModified, File.GetLastWriteTime(root + "\ChannelConfig.txt")) != 0) { //modified file
+                channelConfigLastModified = File.GetLastWriteTime(root + "\ChannelConfig.txt");
                 Console.WriteLine("Reading ChannelConfig.txt for changes");
 
                 List<bool> check = new List<bool>();
                 for (int i = 0; i < BatteryList.Count; i++)
                     check.Add(false);                
-                //foreach (var val in check)
-                //    Console.WriteLine(val);
 
                 List<int> addCells = new List<int>(); //store line index to add
                 bool removeCells = false; //store cell indices to remove
@@ -764,16 +702,6 @@ namespace ArbinCTI.Core
         static void Main(string[] args)
         {
             ArbinClientTests tests = new ArbinClientTests();
-
-
-            //run real-time ML prediction module
-            //tests.realTimeMachineLearning();
-
-            //run real-time current adjustment module. Uses 3E measurement to adjust current
-            //tests.determineChannels();
-            //tests.dynamicCharging();
-
-            //tests.startCTI();
             tests.threeEandtwoE();
 
 
