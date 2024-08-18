@@ -8,11 +8,6 @@ import warnings
 def plot_voltage_distribution(x_data, y_data, cellNum, cycle, masterList):
 
     fig, axs = plt.subplots(2,5, figsize = (10,10))
-    # cmap = plt.cm.viridis(np.linspace(0,1,4))
-    # for i in range(figDim[0]):
-    #     for j in range(figDim[1]):
-    #         axs[i, j].set_prop_cycle('color', cmap)
-
 
     w = 0.05
 
@@ -22,7 +17,6 @@ def plot_voltage_distribution(x_data, y_data, cellNum, cycle, masterList):
 
     for i in range(axs.shape[0]):
         for j in range(axs.shape[1]):
-            # volt_sample = xCC.loc[cellNum, 5]['Voltage'].to_numpy()
             volt_sample = y_data.loc[cellNum,cycle].to_numpy()
 
             axs[i,j].hist(volt_sample, bins = n, label = cellNum)
@@ -30,14 +24,9 @@ def plot_voltage_distribution(x_data, y_data, cellNum, cycle, masterList):
                 axs[i,j].set_xlabel('Anode voltage')
             axs[i,j].set_title(str(cellNum) +  ', ' + str(masterList[cellNum]) + 'C')
 
-            # axs[i,j].set_xticks([3.5, 3.75, 4, 4.25])
             axs[i,j].set_xticks([-0.1, 0, 0.1, 0.2, 0.3])
             cellNum+=1
-            # break
-            
-    # plt.ylabel('Frequency')
-    # plt.legend()
-
+   
 #accepts whole datafrmae, where cellNum and cols specify what to plot
 def plot_multiple_cycles_one_cell(x_data, y_data, cellNum, cols, c_rate):
 
@@ -140,11 +129,6 @@ def plot_one_cycle_multiple_cells(x_data, y_data, cycle, cell_train, cell_test, 
     i = 0
     j = 0
 
- 
-
-    # cols = ['Voltage', 'Energy', 'dVoltage/dt', 'Time', 'Overpotential', 'Capacity']
-    # cols = use_cols
-
 
     for index, col in enumerate(x_data[cols]):
         if(j == figDim[1]):
@@ -154,8 +138,6 @@ def plot_one_cycle_multiple_cells(x_data, y_data, cycle, cell_train, cell_test, 
         for cellNum in cell_train:
             try:
                 axs[i,j].plot(x_data.loc[cellNum, cycle][col], y_data.loc[cellNum, cycle][:])
-                # print(cellNum)
-                # axs[i,j].plot(x_data.loc[cellNum, cycle][col], x_data.loc[cellNum, cycle]['Voltage'])
             except:
                 print('failed ' + str(cellNum) + ' ' + str(cycle))
         for cellNum in cell_test:

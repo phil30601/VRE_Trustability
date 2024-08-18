@@ -49,12 +49,7 @@ def create_CC_data(x_data,  y_data):
 def create_charging_features(x_data, y_data, fReference, cell_params):
     
 
-    #overpotential
-    # temp = x_data.groupby(x_data.index.names).apply(lambda g: abs(integrate.cumulative_trapezoid(g.Current, x=g.Time, initial = 0)))/3600
-
-
-    # x_data['Capacity'] =  pd.concat(pd.DataFrame(temp.loc[(i)]) for i in temp.index).to_numpy()
-
+    #normalize capacity
     socData = x_data['Capacity'].apply(lambda x: x/cell_params["nom_cap"]*100)
     socData[socData < 0] = 0
     socData[socData > 100] = 100
@@ -66,19 +61,9 @@ def create_charging_features(x_data, y_data, fReference, cell_params):
         a = subset.index[1]
         return volt - reference[a[0], 0](cap)
 
-    def eta_cap(subset, volt, reference, cap):
-        a = subset.index[1]
-        return cap - reference[a[0], 1](volt)
-
-    # print('okay')
     temp = x_data.groupby(x_data.index.names).apply(lambda g: eta_volt(g, g.Voltage, fReference, g.Capacity))
     temp.index = temp.index.droplevel(2).droplevel(2)
     x_data['Overpotential'] =  temp
-
-
-    # temp = x_data.groupby(x_data.index.names).apply(lambda g: eta_cap(g, g.Voltage, fReference, g.Capacity))
-    # temp.index = temp.index.droplevel(2).droplevel(2)
-    # x_data['Cap_overpotential'] = temp
 
     # dq_dv
     # global funcs 
@@ -96,12 +81,8 @@ def create_charging_features(x_data, y_data, fReference, cell_params):
 
     # x_data['dQ_dV'] = dq_dv
 
-    ###CHECK  ADFJASDKFJASKDFJASD
-    # x_data['Capacity'] = x_data['Capacity']/cell_params["nom_cap"]*100
     x_data['Energy'] = x_data['Energy'].abs()/cell_params["nom_energy"]*100
     x_data['Throughput'] = x_data['Throughput']/cell_params["nom_cap"]*100
-
-
 
     #create derivative feature
     derivInput = x_data.groupby(x_data.index.names).diff().fillna(0)
@@ -110,16 +91,7 @@ def create_charging_features(x_data, y_data, fReference, cell_params):
     del derivInput
     x_data.drop(['dTime/dt', 'dCurrent/dt', 'dThroughput/dt'], axis = 1, inplace = True )
 
-    #Create multiplication features
-    # pidx = np.indices((x_data.shape[1], x_data.shape[1])).reshape(2,-1).T
-    # uniqueIdx ={tuple(sorted(item)) for item in pidx}
-    # pidx = np.array(list(uniqueIdx)).T
-    # colNames =  [ "*".join( [ x_data.columns[i[0]], x_data.columns[i[1]]  ]) for i in uniqueIdx ] 
-    # #multInput = pd.CCFrame(inputCC.values[:, pidx[0]] * inputCC.values[:, pidx[1]] , columns=colNames, axis = "index")
-    # # print(pidx[0])
-    # multInput = np.multiply(x_data.iloc[:, pidx[0]], x_data.iloc[:, pidx[1]])
-    # multInput.columns = colNames
-    # x_data = pd.concat([x_data, multInput], axis = 1)
+
 
     x_data['Capacity*Current'] = x_data['Capacity']*x_data['Current']
     x_data['Power'] = x_data['Voltage']*x_data['Current']
@@ -131,14 +103,7 @@ def create_charging_features(x_data, y_data, fReference, cell_params):
 
     x_data['Energy*Overpotential'] = x_data['Energy']*x_data['Overpotential']
     x_data['Capacity*Overpotential'] = x_data['Capacity']*x_data['Overpotential']
-    # x_data['Capacity*Cap_overpotential'] = x_data['Capacity']*x_data['Cap_overpotential']
-    # x_data['Overpotential*Cap_overpotential'] = x_data['Overpotential']*x_data['Cap_overpotential']
-    # x_data['CE*Capacity'] = x_data['Capacity']*x_data['CE']
-    # x_data['VE*Capacity'] = x_data['Capacity']*x_data['VE']
-    # x_data['VE*Voltage'] = x_data['Voltage']*x_data['VE']
-    # x_data['EE*Capacity'] = x_data['Capacity']*x_data['EE']
-    # x_data['EE*Overpotential'] = x_data['Overpotential']*x_data['EE']
-    # x_data['VE*Overpotential'] = x_data['Overpotential']*x_data['VE']
+
     x_data['Capacity*dEnergy/dt'] = x_data['Capacity']*x_data['dEnergy/dt']
 
 
