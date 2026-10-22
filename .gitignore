@@ -1,1 +1,10 @@
 .venv-rocm/
+**/__pycache__/
+*.py[cod]
+Plotting/
+artifacts/
+data/
+Graph/
+ResearchPlan/
+Arbin-CTI/
+Open-source-data.zip

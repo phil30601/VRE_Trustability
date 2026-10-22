@@ -1,0 +1,7 @@
+FROM rocm/tensorflow:rocm7.2.1-py3.12-tf2.20-dev
+
+WORKDIR /workspace
+COPY requirements-linux-rocm.txt /tmp/requirements-linux-rocm.txt
+RUN python3 -m pip install --no-cache-dir -r /tmp/requirements-linux-rocm.txt
+
+CMD ["python3", "-m", "jupyterlab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--ServerApp.root_dir=/workspace"]
